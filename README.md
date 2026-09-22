@@ -1,10 +1,16 @@
-# OMB V2
-Integrated Membership Management System for Ojol Molis Bersatu.
+# OMB V2 — Simple Structured Frontend
 
-Stack: React + Vite + Supabase + GitHub Pages.
+Tanpa React, Vite, npm, package.json, atau GitHub Actions.
 
-Frontend only uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY. NEVER put a service_role key in this repository.
+Struktur:
+- `/` = beranda
+- `/public/` = website publik
+- `/member/` = portal anggota
+- `/admin/` = admin
+- `/auth/` = login/auth
+- `/assets/css/` = semua CSS
+- `/assets/js/` = JavaScript dan konfigurasi Supabase
 
-Current UI includes public website, registration, login, forgot-PIN UI, member portal, admin portal, public member verification, and Supabase/Edge Function service wrappers.
+Setiap kategori punya folder dan `index.html`, sehingga GitHub Pages bisa langsung melayani halaman tanpa proses build.
 
-Backend note: final forgot-PIN recovery-token/set-PIN flow is intentionally not considered complete until the remaining Edge Functions are finished.
+Langkah berikutnya: upload struktur ini ke root repository, lalu set GitHub Pages → Deploy from a branch → main → root.
