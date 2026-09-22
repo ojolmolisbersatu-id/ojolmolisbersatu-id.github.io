@@ -1,1 +1,1 @@
-h
+window.OMB=window.OMB||{};function toggleMenu(){document.querySelector('.navlinks')?.classList.toggle('open')}
