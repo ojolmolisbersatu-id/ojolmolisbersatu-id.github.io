@@ -1,41 +1,49 @@
 <!doctype html>
 <html lang="id">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#00B14F"><title>Login Anggota — OMB</title>
-<link rel="stylesheet" href="../../../assets/css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00B14F">
+<title>Login Anggota — OMB</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
 </head>
 <body>
-<header class="site-header"><div class="container nav-wrap">
-<a class="brand" href="../../index.html">OMB <span>Ojol Molis Bersatu</span></a>
-<button class="menu-toggle" aria-label="Buka menu">☰</button>
-<nav class="site-nav">
-<a href="../../index.html">Beranda</a><a href="../../public/agenda/">Agenda</a>
-<a href="../../public/berita/">Berita</a><a href="../../public/benefit/">Benefit</a>
-<a href="../../public/mitra/">Mitra</a><a href="../../public/cek-anggota/">Cek Anggota</a>
+<header class="topbar"><div class="nav">
+<a class="brand" href="../../"><span class="brand-mark">OMB</span><span>Ojol Molis Bersatu<small>Komunitas Driver Motor Listrik</small></span></a>
+<button class="menu" onclick="toggleMenu()">☰</button>
+<nav class="navlinks">
+<a href="../../">Beranda</a><a href="../../public/agenda/">Agenda</a><a href="../../public/berita/">Berita</a>
+<a href="../../public/benefit/">Benefit</a><a href="../../public/mitra/">Mitra</a><a href="../../public/cek-anggota/">Cek Anggota</a>
 <a href="../../public/daftar/">Daftar</a>
 </nav></div></header>
-<main><section class="page-hero"><div class="container">
-<p class="eyebrow">AREA ANGGOTA OMB</p><h1>Login Anggota</h1>
-<p>Masuk menggunakan ID OMB dan PIN Anda.</p></div></section>
-<section class="container page-content"><div class="content-card auth-card">
+
+<main class="container">
+<section class="page-head">
+<span class="eyebrow">AREA ANGGOTA OMB</span>
+<h1>Login Anggota</h1>
+<p>Masuk menggunakan ID OMB dan PIN Anda.</p>
+</section>
+<section class="section"><div class="card form-card">
 <form id="loginForm">
 <label for="memberNumber">ID OMB</label>
 <input id="memberNumber" type="text" placeholder="Contoh: OMB-001" autocomplete="username" required>
 <label for="pin">PIN</label>
 <input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="6 digit PIN" autocomplete="current-password" required>
-<button class="btn btn-primary" type="submit">Masuk</button>
-<p id="message" class="form-message"></p>
+<div class="actions"><button class="btn" type="submit">Masuk</button><a class="btn secondary" href="../../public/daftar/">Daftar</a></div>
+<p id="message" class="msg" style="display:none"></p>
 </form>
-<div class="auth-links"><a href="../../public/daftar/">Belum menjadi anggota? Daftar</a>
-<a href="../forgot-pin/">Lupa PIN?</a></div>
-</div></section></main>
-<footer class="site-footer"><div class="container">© OMB Ojol Molis Bersatu</div></footer>
-<script src="../../../assets/js/app.js"></script>
+<p style="margin-top:18px"><a href="../forgot-pin/">Lupa PIN?</a></p>
+</div></section>
+</main>
+
+<footer><div class="footer-inner"><span>© OMB Ojol Molis Bersatu</span><span>Ojol Molis Bersatu</span></div></footer>
+<script src="../../assets/js/app.js"></script>
 <script>
 document.getElementById("loginForm").addEventListener("submit",function(e){
 e.preventDefault();
-document.getElementById("message").textContent="Login akan dihubungkan ke Supabase pada tahap koneksi backend.";
+const msg=document.getElementById("message");
+msg.style.display="block";
+msg.textContent="Login akan dihubungkan ke Supabase pada tahap koneksi backend.";
 });
 </script>
 </body></html>
