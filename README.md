@@ -1,16 +1,4 @@
-# OMB V2 — Simple Structured Frontend
-
+# OMB V2 Public First
+Root `/` langsung menjadi website publik OMB. Member login/daftar tersedia dari menu publik. Admin tidak ditampilkan di menu publik.
+CSS di `assets/css`, JS di `assets/js`, gambar di `assets/images`.
 Tanpa React, Vite, npm, package.json, atau GitHub Actions.
-
-Struktur:
-- `/` = beranda
-- `/public/` = website publik
-- `/member/` = portal anggota
-- `/admin/` = admin
-- `/auth/` = login/auth
-- `/assets/css/` = semua CSS
-- `/assets/js/` = JavaScript dan konfigurasi Supabase
-
-Setiap kategori punya folder dan `index.html`, sehingga GitHub Pages bisa langsung melayani halaman tanpa proses build.
-
-Langkah berikutnya: upload struktur ini ke root repository, lalu set GitHub Pages → Deploy from a branch → main → root.
