@@ -28,8 +28,8 @@
 <label for="memberNumber">ID OMB</label>
 <input id="memberNumber" type="text" placeholder="Contoh: OMB-001" autocomplete="username" required>
 <label for="pin">PIN</label>
-<input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="6 digit PIN" autocomplete="current-password" required>
-<div class="actions"><button class="btn" type="submit">Masuk</button><a class="btn secondary" href="../../public/daftar/">Daftar</a></div>
+<input id="pin" type="password" inputmode="numeric" maxlength="72" placeholder="PIN Anda" autocomplete="current-password" required>
+<div class="actions"><button id="loginButton" class="btn" type="submit">Masuk</button><a class="btn secondary" href="../../public/daftar/">Daftar</a></div>
 <p id="message" class="msg" style="display:none"></p>
 </form>
 <p style="margin-top:18px"><a href="../forgot-pin/">Lupa PIN?</a></p>
@@ -37,13 +37,97 @@
 </main>
 
 <footer><div class="footer-inner"><span>© OMB Ojol Molis Bersatu</span><span>Ojol Molis Bersatu</span></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../../assets/js/config.js"></script>
 <script src="../../assets/js/app.js"></script>
 <script>
-document.getElementById("loginForm").addEventListener("submit",function(e){
-e.preventDefault();
-const msg=document.getElementById("message");
-msg.style.display="block";
-msg.textContent="Login akan dihubungkan ke Supabase pada tahap koneksi backend.";
-});
+(async function(){
+  const form=document.getElementById('loginForm');
+  const idInput=document.getElementById('memberNumber');
+  const pinInput=document.getElementById('pin');
+  const msg=document.getElementById('message');
+  const btn=document.getElementById('loginButton');
+
+  function showMessage(text,isError=true){
+    msg.style.display='block';
+    msg.textContent=text;
+    msg.className='msg '+(isError?'error':'success');
+  }
+
+  try {
+    const sb=OMB.initSupabase();
+    const {data:{session}}=await sb.auth.getSession();
+    if(session){
+      const {data:isSuper,error}=await sb.rpc('is_super_admin');
+      if(!error && isSuper){ location.href='../../admin/'; return; }
+    }
+  } catch(e) {}
+
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    msg.style.display='none';
+    btn.disabled=true;
+    btn.textContent='Memproses...';
+
+    const identity=idInput.value.trim();
+    const password=pinInput.value.trim();
+
+    try {
+      const sb=OMB.initSupabase();
+
+      // Super Admin tetap memakai halaman login yang sama.
+      // Tidak ada tombol/menu Super Admin di UI.
+      // Jika input berupa email, autentikasi menggunakan Supabase Auth.
+      if(identity.includes('@')){
+        const {data,error}=await sb.auth.signInWithPassword({
+          email:identity,
+          password:password
+        });
+        if(error) throw error;
+
+        const {data:isSuper,error:superError}=await sb.rpc('is_super_admin');
+        if(superError || !isSuper){
+          await sb.auth.signOut();
+          throw new Error('Akun tidak memiliki akses Super Admin.');
+        }
+
+        location.href='../../admin/';
+        return;
+      }
+
+      // Login member/admin menggunakan Edge Function login-member.
+      const response=await fetch(window.OMB_CONFIG.FUNCTIONS_BASE+'/login-member',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({member_number:identity,pin:password})
+      });
+
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok) throw new Error(result.error||result.message||'ID OMB atau PIN salah.');
+
+      await OMB.setSession(result.access_token,result.refresh_token);
+
+      const {data:roles,error:rolesError}=await fetch(window.OMB_CONFIG.FUNCTIONS_BASE+'/get-member-roles',{
+        headers:{'Authorization':'Bearer '+result.access_token}
+      }).then(async r=>[await r.json(),r.ok]).then(([body,ok])=>ok?[body,null]:[null,new Error(body.error||'Gagal membaca role.')]);
+
+      if(rolesError) throw rolesError;
+
+      const adminRoles=['admin_membership','bendahara','admin_event','admin_content','ketua','wakil_ketua','sekretaris'];
+      const roleNames=Array.isArray(roles?.roles)?roles.roles.map(r=>typeof r==='string'?r:r.name):[];
+      const isAdmin=roleNames.some(r=>adminRoles.includes(r));
+
+      location.href=isAdmin?'../../admin/':'../../member/';
+    } catch(error){
+      console.error(error);
+      showMessage(error.message||'Login gagal.');
+    } finally {
+      btn.disabled=false;
+      btn.textContent='Masuk';
+    }
+  });
+})();
 </script>
-</body></html>
+</body>
+</html>
