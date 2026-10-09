@@ -21,18 +21,18 @@
 <section class="page-head">
 <span class="eyebrow">AREA ANGGOTA OMB</span>
 <h1>Login Anggota</h1>
-<p>Masuk menggunakan ID OMB dan PIN Anda.</p>
+<p>Masuk menggunakan email dan password Anda.</p>
 </section>
 <section class="section"><div class="card form-card">
-<form id="loginForm">
-<label for="memberNumber">ID OMB</label>
-<input id="memberNumber" type="text" placeholder="Contoh: OMB-001" autocomplete="username" required>
-<label for="pin">PIN</label>
-<input id="pin" type="password" inputmode="numeric" maxlength="72" placeholder="PIN Anda" autocomplete="current-password" required>
+<form id="loginForm" novalidate>
+<label for="email">Email</label>
+<input id="email" type="email" inputmode="email" placeholder="nama@email.com" autocomplete="username" autocapitalize="none" required>
+<label for="password">Password</label>
+<input id="password" type="password" placeholder="Password Anda" autocomplete="current-password" required>
 <div class="actions"><button id="loginButton" class="btn" type="submit">Masuk</button><a class="btn secondary" href="../../public/daftar/">Daftar</a></div>
-<p id="message" class="msg" style="display:none"></p>
+<p id="message" class="msg" style="display:none" role="alert"></p>
 </form>
-<p style="margin-top:18px"><a href="../forgot-pin/">Lupa PIN?</a></p>
+<p style="margin-top:18px"><a href="../lupa-password/">Lupa password?</a></p>
 </div></section>
 </main>
 
@@ -42,89 +42,63 @@
 <script src="../../assets/js/config.js"></script>
 <script src="../../assets/js/app.js"></script>
 <script>
-(async function(){
-  const form=document.getElementById('loginForm');
-  const idInput=document.getElementById('memberNumber');
-  const pinInput=document.getElementById('pin');
-  const msg=document.getElementById('message');
-  const btn=document.getElementById('loginButton');
+(function(){
+  var form = document.getElementById('loginForm');
+  var emailInput = document.getElementById('email');
+  var pwInput = document.getElementById('password');
+  var msg = document.getElementById('message');
+  var btn = document.getElementById('loginButton');
 
-  function showMessage(text,isError=true){
-    msg.style.display='block';
-    msg.textContent=text;
-    msg.className='msg '+(isError?'error':'success');
+  function show(text, isError){
+    msg.style.display = 'block';
+    msg.textContent = text;
+    msg.className = 'msg' + (isError === false ? '' : ' error');
   }
 
-  try {
-    const sb=OMB.initSupabase();
-    const {data:{session}}=await sb.auth.getSession();
-    if(session){
-      const {data:isSuper,error}=await sb.rpc('is_super_admin');
-      if(!error && isSuper){ location.href='../../admin/'; return; }
+  async function route(){
+    var access = await OMB.getAccess();
+    if (!OMB.isAccountUsable(access)) {
+      await OMB.initSupabase().auth.signOut();
+      throw new Error('Akun Anda belum aktif atau belum terhubung ke data anggota. Hubungi pengurus.');
     }
-  } catch(e) {}
+    if (access.must_change_password) { location.href = OMB.url('auth/ganti-password/'); return; }
+    location.href = OMB.homeFor(access);
+  }
 
-  form.addEventListener('submit',async function(e){
+  var sb = OMB.initSupabase();
+  if (!sb) { show('Layanan belum siap. Muat ulang halaman.'); btn.disabled = true; return; }
+
+  // Sudah punya sesi? langsung arahkan.
+  sb.auth.getSession().then(function(r){
+    if (r.data && r.data.session) {
+      route().catch(function(){ sb.auth.signOut(); });
+    }
+  });
+
+  form.addEventListener('submit', async function(e){
     e.preventDefault();
-    msg.style.display='none';
-    btn.disabled=true;
-    btn.textContent='Memproses...';
+    msg.style.display = 'none';
+    var email = emailInput.value.trim().toLowerCase();
+    var password = pwInput.value;
+    if (!email || !password) { show('Isi email dan password.'); return; }
 
-    const identity=idInput.value.trim();
-    const password=pinInput.value.trim();
-
+    btn.disabled = true;
+    btn.textContent = 'Memproses...';
     try {
-      const sb=OMB.initSupabase();
-
-      // Super Admin tetap memakai halaman login yang sama.
-      // Tidak ada tombol/menu Super Admin di UI.
-      // Jika input berupa email, autentikasi menggunakan Supabase Auth.
-      if(identity.includes('@')){
-        const {data,error}=await sb.auth.signInWithPassword({
-          email:identity,
-          password:password
-        });
-        if(error) throw error;
-
-        const {data:isSuper,error:superError}=await sb.rpc('is_super_admin');
-        if(superError || !isSuper){
-          await sb.auth.signOut();
-          throw new Error('Akun tidak memiliki akses Super Admin.');
-        }
-
-        location.href='../../admin/';
-        return;
+      var r = await sb.auth.signInWithPassword({ email: email, password: password });
+      if (r.error) {
+        var m = (r.error.message || '').toLowerCase();
+        if (r.error.status === 429) throw new Error('Terlalu banyak percobaan. Coba lagi beberapa menit lagi.');
+        if (m.indexOf('not confirmed') !== -1) throw new Error('Email belum dikonfirmasi. Hubungi pengurus.');
+        throw new Error('Email atau password salah.');
       }
-
-      // Login member/admin menggunakan Edge Function login-member.
-      const response=await fetch(window.OMB_CONFIG.FUNCTIONS_BASE+'/login-member',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({member_number:identity,pin:password})
-      });
-
-      const result=await response.json().catch(()=>({}));
-      if(!response.ok) throw new Error(result.error||result.message||'ID OMB atau PIN salah.');
-
-      await OMB.setSession(result.access_token,result.refresh_token);
-
-      const {data:roles,error:rolesError}=await fetch(window.OMB_CONFIG.FUNCTIONS_BASE+'/get-member-roles',{
-        headers:{'Authorization':'Bearer '+result.access_token}
-      }).then(async r=>[await r.json(),r.ok]).then(([body,ok])=>ok?[body,null]:[null,new Error(body.error||'Gagal membaca role.')]);
-
-      if(rolesError) throw rolesError;
-
-      const adminRoles=['admin_membership','bendahara','admin_event','admin_content','ketua','wakil_ketua','sekretaris'];
-      const roleNames=Array.isArray(roles?.roles)?roles.roles.map(r=>typeof r==='string'?r:r.name):[];
-      const isAdmin=roleNames.some(r=>adminRoles.includes(r));
-
-      location.href=isAdmin?'../../admin/':'../../member/';
-    } catch(error){
-      console.error(error);
-      showMessage(error.message||'Login gagal.');
+      await route();
+    } catch (err) {
+      console.error(err);
+      show(err.message || 'Login gagal.');
     } finally {
-      btn.disabled=false;
-      btn.textContent='Masuk';
+      btn.disabled = false;
+      btn.textContent = 'Masuk';
     }
   });
 })();
