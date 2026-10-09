@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00B14F">
+<title>Lupa Password — OMB</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<header class="topbar"><div class="nav">
+<a class="brand" href="../../"><span class="brand-mark">OMB</span><span>Ojol Molis Bersatu<small>Komunitas Driver Motor Listrik</small></span></a>
+<button class="menu" onclick="toggleMenu()">☰</button>
+<nav class="navlinks">
+<a href="../../">Beranda</a><a href="../../public/agenda/">Agenda</a><a href="../../public/berita/">Berita</a>
+<a href="../../public/benefit/">Benefit</a><a href="../../public/mitra/">Mitra</a><a href="../../public/cek-anggota/">Cek Anggota</a>
+<a href="../../public/daftar/">Daftar</a>
+</nav></div></header>
+
+<main class="container">
+<section class="page-head">
+<span class="eyebrow">AREA ANGGOTA OMB</span>
+<h1>Lupa Password</h1>
+<p>Masukkan email akun Anda. Kami kirim tautan untuk membuat password baru.</p>
+</section>
+<section class="section"><div class="card form-card">
+<form id="forgotForm" novalidate>
+<label for="email">Email akun</label>
+<input id="email" type="email" inputmode="email" placeholder="nama@email.com" autocomplete="username" autocapitalize="none" required>
+<div class="actions"><button id="sendButton" class="btn" type="submit">Kirim tautan reset</button><a class="btn secondary" href="../login/">Kembali</a></div>
+<p id="message" class="msg" style="display:none" role="alert"></p>
+</form>
+</div></section>
+</main>
+
+<footer><div class="footer-inner"><span>© OMB Ojol Molis Bersatu</span><span>Ojol Molis Bersatu</span></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/app.js"></script>
+<script>
+(function(){
+  var form = document.getElementById('forgotForm');
+  var emailInput = document.getElementById('email');
+  var msg = document.getElementById('message');
+  var btn = document.getElementById('sendButton');
+  function show(text, isError){
+    msg.style.display = 'block';
+    msg.textContent = text;
+    msg.className = 'msg' + (isError ? ' error' : '');
+  }
+  var sb = OMB.initSupabase();
+  if (!sb) { show('Layanan belum siap. Muat ulang halaman.', true); btn.disabled = true; return; }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var email = emailInput.value.trim().toLowerCase();
+    if (!email) { show('Isi email akun Anda.', true); return; }
+    btn.disabled = true;
+    btn.textContent = 'Mengirim...';
+    try {
+      var r = await sb.auth.resetPasswordForEmail(email, { redirectTo: OMB.url('auth/reset-password/') });
+      if (r.error && r.error.status === 429) {
+        show('Terlalu banyak permintaan. Coba lagi beberapa menit lagi.', true);
+      } else {
+        // Pesan sama untuk email terdaftar maupun tidak (mencegah penelusuran akun).
+        show('Jika email terdaftar, tautan untuk membuat password baru sudah dikirim. Periksa kotak masuk dan folder spam.', false);
+      }
+    } catch (err) {
+      console.error(err);
+      show('Gagal mengirim permintaan. Coba lagi nanti.', true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Kirim tautan reset';
+    }
+  });
+})();
+</script>
+</body>
+</html>
