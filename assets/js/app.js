@@ -43,6 +43,28 @@ OMB.getAccess = async function(){
   if (res.error) throw res.error;
   return res.data;
 };
+/* Pembuatan / reset akun anggota (Edge Function provision-member-account).
+   Hanya berhasil untuk admin dengan izin members.approve atau Super Admin.
+   action: 'create' (default) atau 'reset_password'.
+   Mengembalikan { member_number, email?, temp_password, ... }. Password
+   sementara hanya tampil sekali: jangan disimpan atau dicatat. */
+OMB.provisionAccount = async function(memberId, action){
+  var sb = OMB.initSupabase();
+  if (!sb) throw new Error('Layanan belum siap. Muat ulang halaman.');
+  var r = await sb.functions.invoke('provision-member-account', {
+    body: { member_id: memberId, action: action || 'create' }
+  });
+  if (r.error) {
+    var msg = 'Gagal memproses akun.';
+    try {
+      var j = await r.error.context.json();
+      if (j && j.error) msg = j.error;
+    } catch (e) {}
+    throw new Error(msg);
+  }
+  return r.data;
+};
+
 OMB.isAdminAccess = function(a){
   return !!a && (a.is_super_admin === true || (a.permissions || []).length > 0);
 };
