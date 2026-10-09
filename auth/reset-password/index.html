@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00B14F">
+<title>Buat Password Baru — OMB</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<header class="topbar"><div class="nav">
+<a class="brand" href="../../"><span class="brand-mark">OMB</span><span>Ojol Molis Bersatu<small>Komunitas Driver Motor Listrik</small></span></a>
+<button class="menu" onclick="toggleMenu()">☰</button>
+<nav class="navlinks">
+<a href="../../">Beranda</a><a href="../../public/agenda/">Agenda</a><a href="../../public/berita/">Berita</a>
+<a href="../../public/benefit/">Benefit</a><a href="../../public/mitra/">Mitra</a><a href="../../public/cek-anggota/">Cek Anggota</a>
+<a href="../../public/daftar/">Daftar</a>
+</nav></div></header>
+
+<main class="container">
+<section class="page-head">
+<span class="eyebrow">AREA ANGGOTA OMB</span>
+<h1>Buat Password Baru</h1>
+<p>Tentukan password baru untuk akun Anda.</p>
+</section>
+<section class="section"><div class="card form-card">
+<p id="status" class="msg">Memeriksa tautan reset...</p>
+<form id="resetForm" style="display:none" novalidate>
+<label for="pw1">Password baru</label>
+<input id="pw1" type="password" placeholder="Minimal 8 karakter, huruf dan angka" autocomplete="new-password" required>
+<label for="pw2">Ulangi password baru</label>
+<input id="pw2" type="password" placeholder="Ulangi password baru" autocomplete="new-password" required>
+<div class="actions"><button id="saveButton" class="btn" type="submit">Simpan password</button></div>
+<p id="message" class="msg" style="display:none" role="alert"></p>
+</form>
+<p id="backLink" style="margin-top:18px;display:none"><a href="../lupa-password/">Minta tautan baru</a></p>
+</div></section>
+</main>
+
+<footer><div class="footer-inner"><span>© OMB Ojol Molis Bersatu</span><span>Ojol Molis Bersatu</span></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/app.js"></script>
+<script>
+(function(){
+  // Dicatat SEBELUM klien Supabase memproses URL.
+  var hadRecovery = /type=recovery/.test(location.hash) || /[?&]code=/.test(location.search);
+
+  var status = document.getElementById('status');
+  var form = document.getElementById('resetForm');
+  var msg = document.getElementById('message');
+  var btn = document.getElementById('saveButton');
+  var back = document.getElementById('backLink');
+  var ready = false;
+
+  function show(text, isError){
+    msg.style.display = 'block';
+    msg.textContent = text;
+    msg.className = 'msg' + (isError ? ' error' : '');
+  }
+  function enable(){
+    ready = true;
+    status.style.display = 'none';
+    form.style.display = 'block';
+  }
+  function invalid(){
+    status.textContent = 'Tautan reset tidak valid atau sudah kedaluwarsa.';
+    status.className = 'msg error';
+    back.style.display = 'block';
+  }
+
+  var sb = OMB.initSupabase();
+  if (!sb) { status.textContent = 'Layanan belum siap. Muat ulang halaman.'; status.className = 'msg error'; return; }
+
+  sb.auth.onAuthStateChange(function(event){
+    if (event === 'PASSWORD_RECOVERY') enable();
+  });
+
+  setTimeout(async function(){
+    if (ready) return;
+    if (hadRecovery) {
+      var s = await sb.auth.getSession();
+      if (s.data && s.data.session) { enable(); return; }
+    }
+    invalid();
+  }, 1800);
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var p1 = document.getElementById('pw1').value;
+    var p2 = document.getElementById('pw2').value;
+    var err = OMB.validatePassword(p1);
+    if (err) { show(err, true); return; }
+    if (p1 !== p2) { show('Konfirmasi password tidak sama.', true); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+    try {
+      var up = await sb.auth.updateUser({ password: p1 });
+      if (up.error) {
+        var m = (up.error.message || '').toLowerCase();
+        if (m.indexOf('different') !== -1) throw new Error('Password baru harus berbeda dari password lama.');
+        if (m.indexOf('weak') !== -1) throw new Error('Password terlalu lemah.');
+        throw new Error('Gagal menyimpan password. Minta tautan baru.');
+      }
+      try { await sb.rpc('complete_password_change'); } catch (e2) {}
+      await sb.auth.signOut();
+      form.style.display = 'none';
+      show('Password berhasil diubah. Mengarahkan ke halaman login...', false);
+      setTimeout(function(){ location.href = OMB.url('auth/login/'); }, 1800);
+    } catch (err2) {
+      console.error(err2);
+      show(err2.message || 'Gagal menyimpan password.', true);
+      btn.disabled = false;
+      btn.textContent = 'Simpan password';
+    }
+  });
+})();
+</script>
+</body>
+</html>
