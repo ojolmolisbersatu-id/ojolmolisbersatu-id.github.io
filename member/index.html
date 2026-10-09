@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#00B14F">
 <title>Member Portal — OMB</title>
 <link rel="stylesheet" href="../assets/css/style.css">
-</head>
-<body>
+<style>body[data-guard]{visibility:hidden}body.omb-ok{visibility:visible}</style></head>
+<body data-guard="member">
 <header class="topbar"><div class="nav">
 <a class="brand" href="../"><span class="brand-mark">OMB</span><span>Ojol Molis Bersatu<small>Portal Anggota</small></span></a>
 <button class="menu" onclick="toggleMenu()">☰</button>
@@ -16,7 +16,7 @@
 <a href="../public/agenda/">Agenda</a>
 <a href="../public/berita/">Berita</a>
 <a href="../public/cek-anggota/">Cek Anggota</a>
-<a href="../auth/login/">Keluar</a>
+<a href="#" data-logout>Keluar</a>
 </nav></div></header>
 <main class="container">
 <section class="page-head">
@@ -36,5 +36,5 @@
 </section>
 </main>
 <footer><div class="footer-inner"><span>© OMB Ojol Molis Bersatu</span><span>Portal Anggota</span></div></footer>
-<script src="../assets/js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="../assets/js/config.js"></script><script src="../assets/js/app.js"></script>
 </body></html>
