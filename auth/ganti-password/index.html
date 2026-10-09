@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#00B14F">
+<title>Ganti Password — OMB</title>
+<link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<header class="topbar"><div class="nav">
+<a class="brand" href="../../"><span class="brand-mark">OMB</span><span>Ojol Molis Bersatu<small>Komunitas Driver Motor Listrik</small></span></a>
+<button class="menu" onclick="toggleMenu()">☰</button>
+<nav class="navlinks">
+<a href="../../">Beranda</a><a href="#" data-logout>Keluar</a>
+</nav></div></header>
+
+<main class="container">
+<section class="page-head">
+<span class="eyebrow">AREA ANGGOTA OMB</span>
+<h1>Ganti Password</h1>
+<p>Demi keamanan, buat password baru sebelum melanjutkan.</p>
+</section>
+<section class="section"><div class="card form-card">
+<form id="changeForm" novalidate>
+<label for="pwCur">Password saat ini</label>
+<input id="pwCur" type="password" placeholder="Password saat ini" autocomplete="current-password" required>
+<label for="pw1">Password baru</label>
+<input id="pw1" type="password" placeholder="Minimal 8 karakter, huruf dan angka" autocomplete="new-password" required>
+<label for="pw2">Ulangi password baru</label>
+<input id="pw2" type="password" placeholder="Ulangi password baru" autocomplete="new-password" required>
+<div class="actions"><button id="saveButton" class="btn" type="submit">Simpan password</button></div>
+<p id="message" class="msg" style="display:none" role="alert"></p>
+</form>
+</div></section>
+</main>
+
+<footer><div class="footer-inner"><span>© OMB Ojol Molis Bersatu</span><span>Ojol Molis Bersatu</span></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../../assets/js/config.js"></script>
+<script src="../../assets/js/app.js"></script>
+<script>
+(async function(){
+  var form = document.getElementById('changeForm');
+  var msg = document.getElementById('message');
+  var btn = document.getElementById('saveButton');
+  function show(text, isError){
+    msg.style.display = 'block';
+    msg.textContent = text;
+    msg.className = 'msg' + (isError ? ' error' : '');
+  }
+  var sb = OMB.initSupabase();
+  if (!sb) { show('Layanan belum siap. Muat ulang halaman.', true); btn.disabled = true; return; }
+
+  var s = await sb.auth.getSession();
+  if (!s.data || !s.data.session) { location.replace(OMB.url('auth/login/')); return; }
+  var email = s.data.session.user.email;
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    var cur = document.getElementById('pwCur').value;
+    var p1 = document.getElementById('pw1').value;
+    var p2 = document.getElementById('pw2').value;
+    if (!cur) { show('Isi password saat ini.', true); return; }
+    var err = OMB.validatePassword(p1);
+    if (err) { show(err, true); return; }
+    if (p1 !== p2) { show('Konfirmasi password tidak sama.', true); return; }
+    if (p1 === cur) { show('Password baru harus berbeda dari password saat ini.', true); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+    try {
+      var re = await sb.auth.signInWithPassword({ email: email, password: cur });
+      if (re.error) throw new Error('Password saat ini salah.');
+      var up = await sb.auth.updateUser({ password: p1 });
+      if (up.error) {
+        var m = (up.error.message || '').toLowerCase();
+        if (m.indexOf('different') !== -1) throw new Error('Password baru harus berbeda dari password lama.');
+        if (m.indexOf('weak') !== -1) throw new Error('Password terlalu lemah.');
+        throw new Error('Gagal menyimpan password.');
+      }
+      var done = await sb.rpc('complete_password_change');
+      if (done.error) console.error(done.error);
+      var access = await OMB.getAccess();
+      form.style.display = 'none';
+      show('Password berhasil diubah.', false);
+      setTimeout(function(){ location.href = OMB.homeFor(access); }, 1200);
+    } catch (err2) {
+      console.error(err2);
+      show(err2.message || 'Gagal menyimpan password.', true);
+      btn.disabled = false;
+      btn.textContent = 'Simpan password';
+    }
+  });
+})();
+</script>
+</body>
+</html>
